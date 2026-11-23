@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { uploadDocument } from '../services/documentApi.js';
 
-export default function UploadComponent({ onUploaded }) {
+export default function UploadComponent({ accessToken, onUploaded }) {
   const inputRef = useRef(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -22,7 +22,7 @@ export default function UploadComponent({ onUploaded }) {
     setIsError(false);
 
     try {
-      await uploadDocument(selectedFile);
+      await uploadDocument(selectedFile, accessToken);
       setSelectedFile(null);
       if (inputRef.current) inputRef.current.value = '';
       setMessage('Documento enviado com sucesso.');

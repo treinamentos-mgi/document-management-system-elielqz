@@ -24,6 +24,29 @@ app.get('/health', (req, res) => {
 
 app.use(documentRoutes);
 
+app.use((error, req, res, next) => {
+  if (error.code === 'STORAGE_QUOTA_EXCEEDED') {
+    return res.status(507).json({
+      error: {
+        code: error.code,
+        message: 'O armazenamento atingiu a capacidade máxima.',
+      },
+    });
+  }
+
+  console.error('Erro não tratado na API:', error);
+  if (res.headersSent) {
+    return next(error);
+  }
+
+  return res.status(500).json({
+    error: {
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Não foi possível concluir a operação.',
+    },
+  });
+});
+
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`DMS backend ouvindo na porta ${PORT}`);

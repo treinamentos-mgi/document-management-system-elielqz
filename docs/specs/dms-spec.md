@@ -14,12 +14,14 @@ Entregar uma aplicação web simples para envio, consulta e download de document
 - Gestão simples por usuário por meio do campo `owner` nos metadados.
 - Persistência dos arquivos no filesystem local da aplicação.
 - Comunicação HTTP entre frontend e backend.
+- Proteção dos endpoints de documentos por um token compartilhado configurado no ambiente.
+- Limite global de 1 GiB para arquivos no armazenamento local.
+- Limite de 10 tentativas de upload por minuto por instância.
 
 ### Fora do escopo
 
 - Armazenamento externo ou em provedores de nuvem.
-- Autenticação e autorização completas no MVP.
-- Controle de acesso baseado em sessões ou tokens.
+- Contas individuais, sessões e autorização isolada por usuário.
 - Compartilhamento de documentos entre usuários.
 - Versionamento de documentos.
 - Exclusão e atualização de documentos.
@@ -33,7 +35,7 @@ Entregar uma aplicação web simples para envio, consulta e download de document
 | RF-01 | O usuário pode enviar um arquivo por formulário multipart. |
 | RF-02 | O sistema deve registrar metadados do arquivo enviado: identificador, nome original, tamanho, data/hora e dono. |
 | RF-03 | O sistema deve rejeitar uma requisição sem arquivo ou com campo multipart inválido. |
-| RF-04 | O sistema deve limitar o tamanho de cada upload a 25 MiB nesta fase. |
+| RF-04 | O sistema deve limitar cada upload a 25 MiB e o armazenamento total a 1 GiB. |
 | RF-05 | O sistema deve preservar o nome original do arquivo nos metadados sem usá-lo como nome físico do arquivo armazenado. |
 | RF-06 | O sistema deve aceitar arquivos de qualquer tipo de conteúdo no MVP. |
 | RF-07 | O usuário pode listar os documentos existentes na aplicação. |
@@ -42,6 +44,8 @@ Entregar uma aplicação web simples para envio, consulta e download de document
 | RF-10 | O usuário pode baixar um documento pelo identificador exibido na listagem. |
 | RF-11 | O download deve devolver o conteúdo original do arquivo e o nome sugerido ao usuário. |
 | RF-12 | O sistema deve retornar uma indicação de erro quando o identificador não existir ou o arquivo estiver indisponível. |
+| RF-13 | Upload, listagem e download devem exigir o token compartilhado de API. |
+| RF-14 | O sistema deve limitar uploads a 10 por minuto por instância. |
 
 ## 4. Requisitos não funcionais
 
@@ -59,6 +63,8 @@ Entregar uma aplicação web simples para envio, consulta e download de document
 | RNF-10 | Nenhum provedor externo, serviço de nuvem ou armazenamento remoto poderá ser usado para os arquivos. |
 | RNF-11 | Erros HTTP devem seguir um formato JSON consistente e não expor caminhos internos ou pilhas de erro ao cliente. |
 | RNF-12 | Operações de entrada e saída de arquivos serão tratadas nos limites apropriados da arquitetura e devem produzir respostas HTTP controladas em caso de falha. |
+| RNF-13 | O token será fornecido por `DMS_API_TOKEN`; sem configuração, os endpoints de documentos devem falhar de forma fechada. |
+| RNF-14 | O limite total do armazenamento será configurável por `DOCUMENT_STORAGE_MAX_BYTES`, com padrão de 1 GiB. |
 
 ## 5. Modelo de dados
 
@@ -81,13 +87,13 @@ Os metadados dos documentos ficarão armazenados em uma coleção em memória du
 - `storedName` não deve ser exposto diretamente pelas respostas de listagem.
 - `size` deve representar a quantidade real de bytes gravados pelo multer.
 - `uploadedAt` deve ser criado pelo backend no momento da conclusão do upload.
-- `owner` é reservado para gestão simples por usuário. Como não há autenticação no MVP, o valor pode ser atribuído por uma convenção interna definida na implementação futura.
+- `owner` é reservado para gestão simples por usuário. O token compartilhado não identifica usuários e não fornece isolamento por dono.
 - Os metadados são voláteis e não são sincronizados com os arquivos encontrados em disco ao iniciar o sistema.
 - Não será criado persistência em banco de dados nesta fase.
 
 ## 6. Contratos de API
 
-Todas as respostas JSON devem usar `Content-Type: application/json`. Os endpoints previstos funcionam sob o servidor Express e são acessados pelo frontend por meio do prefixo `/api`.
+Todas as respostas JSON devem usar `Content-Type: application/json`. Os endpoints de documentos exigem `Authorization: Bearer <DMS_API_TOKEN>`; `/health` permanece público. Os endpoints são acessados pelo frontend por meio do prefixo `/api`.
 
 ### 6.1 POST /upload
 
@@ -98,6 +104,7 @@ Envia um único documento por `multipart/form-data`.
 - Campo multipart: `file`.
 - Tipo: arquivo.
 - Limite: 25 MiB por requisição.
+- Limite total: 1 GiB no diretório de armazenamento, contabilizando os arquivos existentes.
 
 Exemplo conceptual:
 
@@ -146,6 +153,10 @@ campo: file
 
 `500 Internal Server Error` para falha na gravação do arquivo ou na criação dos metadados.
 
+`401 Unauthorized` quando o token estiver ausente ou inválido; `503 Service Unavailable` quando `DMS_API_TOKEN` não estiver configurado. O endpoint retorna `413` ou `507` quando o upload exceder a quota disponível ou o armazenamento já estiver cheio.
+
+`429 Too Many Requests` quando a instância receber mais de 10 tentativas de upload em um minuto.
+
 ### 6.2 GET /documents
 
 Lista os metadados dos documentos registrados na execução atual.
@@ -173,11 +184,11 @@ Quando não houver documentos, o retorno será uma lista vazia:
 []
 ```
 
-Se autenticação ou filtro por usuário forem introduzidos posteriormente, o contrato poderá incluir o parâmetro de usuário, mas essa regra não faz parte do MVP.
+O token compartilhado protege a API, mas não filtra documentos por usuário. Contas individuais e autorização por `owner` permanecem fora do MVP.
 
 ### 6.3 GET /documents/:id/download
 
-Baixa o conteúdo do documento identificado por `id`.
+Baixa o conteúdo do documento identificado por `id`; exige o mesmo token compartilhado.
 
 **Saída de sucesso**
 
@@ -241,6 +252,8 @@ O middleware do multer deve:
 - usar nomes físicos gerados pelo servidor;
 - impedir que o nome original determine o caminho no disco;
 - limitar o tamanho em 25 MiB;
+- contabilizar os arquivos locais e rejeitar uploads que ultrapassem 1 GiB no total;
+- limitar a taxa de upload a 10 tentativas por minuto por instância;
 - remover ou não registrar metadados caso a gravação ou criação dos metadados falhe.
 
 ### 7.3 Metadados
@@ -261,7 +274,7 @@ O frontend deve consumir os mesmos metadados da API e evitar a duplicação da l
 
 ### 7.5 Configuração
 
-As configurações sensíveis ao ambiente serão fornecidas por variáveis de ambiente, conforme os princípios 12-Factor. A porta e o diretório de arquivos são candidatos iniciais para configuração. Valores padrão podem existir apenas para desenvolvimento local.
+As configurações sensíveis ao ambiente serão fornecidas por variáveis de ambiente, conforme os princípios 12-Factor. `DMS_API_TOKEN` é obrigatório para acessar documentos; `DOCUMENT_STORAGE_MAX_BYTES` pode ajustar a quota e tem padrão de 1 GiB. A porta e o diretório de arquivos também podem ser configurados por ambiente.
 
 ## 8. Plano de execução
 
@@ -290,5 +303,7 @@ As etapas abaixo são apenas um plano para implementação posterior. Esta etapa
 - `GET /documents/:id/download` devolve o arquivo correto como anexo.
 - Um identificador inexistente retorna `404`.
 - Nenhuma resposta da API expõe `storedName` ou caminhos físicos internos.
+- Upload, listagem e download sem token válido retornam `401`; token não configurado retorna `503`.
+- O armazenamento não ultrapassa a quota configurada, inclusive sob uploads concorrentes.
 - Reiniciar o processo limpa a listagem em memória sem pretender reconstruir os metadados a partir do disco.
 - Nenhum armazenamento externo ou serviço de nuvem participa do fluxo.

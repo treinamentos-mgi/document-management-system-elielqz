@@ -13,7 +13,7 @@ function formatDate(date) {
   }).format(new Date(date));
 }
 
-export default function DocumentList({ documents, isLoading, error }) {
+export default function DocumentList({ accessToken, documents, isLoading, error }) {
   return (
     <section className="panel document-panel" aria-labelledby="documents-title">
       <div className="section-heading">
@@ -42,6 +42,7 @@ export default function DocumentList({ documents, isLoading, error }) {
                 </p>
               </div>
               <DownloadButton
+                accessToken={accessToken}
                 documentId={document.id}
                 documentName={document.originalName}
               />

@@ -9,7 +9,7 @@ async function readResponse(response) {
       return response.json();
     }
 
-    return response;
+    throw new Error('O servidor retornou uma resposta em formato inesperado.');
   }
 
   let message = 'Não foi possível concluir a operação.';
@@ -24,23 +24,44 @@ async function readResponse(response) {
   throw new Error(message);
 }
 
-export async function uploadDocument(file) {
+export async function uploadDocument(file, accessToken) {
   const formData = new FormData();
   formData.append('file', file);
 
   const response = await fetch(`${API_PREFIX}/upload`, {
     method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
     body: formData,
   });
 
   return readResponse(response);
 }
 
-export async function listDocuments() {
-  const response = await fetch(`${API_PREFIX}/documents`);
+export async function listDocuments(accessToken) {
+  const response = await fetch(`${API_PREFIX}/documents`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
   return readResponse(response);
 }
 
 export function getDownloadUrl(documentId) {
   return `${API_PREFIX}/documents/${encodeURIComponent(documentId)}/download`;
+}
+
+export async function downloadDocument(documentId, accessToken) {
+  const response = await fetch(getDownloadUrl(documentId), {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    return readResponse(response);
+  }
+
+  return response.blob();
 }

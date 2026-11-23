@@ -1,0 +1,269 @@
+:root {
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  color: #18231f;
+  background: #edf1ed;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    linear-gradient(rgba(24, 35, 31, 0.035) 1px, transparent 1px),
+    #edf1ed;
+  background-size: 100% 32px;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button,
+.download-button {
+  cursor: pointer;
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.app-header {
+  border-bottom: 1px solid #cbd3ce;
+  background: rgba(248, 250, 248, 0.92);
+}
+
+.app-header > div,
+.app-content {
+  width: min(1120px, calc(100% - 48px));
+  margin: 0 auto;
+}
+
+.app-header > div {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  min-height: 104px;
+  padding: 24px 0;
+}
+
+.app-header h1,
+.panel h2 {
+  margin: 0;
+}
+
+.app-header h1 {
+  font-size: 34px;
+  line-height: 1;
+}
+
+.eyebrow {
+  margin: 0 0 7px;
+  color: #68766f;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.app-content {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 24px;
+  padding: 32px 0 48px;
+}
+
+.panel {
+  border: 1px solid #cbd3ce;
+  border-radius: 8px;
+  background: #f9fbf9;
+}
+
+.upload-panel {
+  align-self: start;
+  padding: 24px;
+}
+
+.upload-panel h2,
+.document-panel h2 {
+  font-size: 22px;
+}
+
+.upload-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.file-picker {
+  position: relative;
+  display: grid;
+  min-height: 104px;
+  place-items: center;
+  border: 1px dashed #9daaa3;
+  border-radius: 6px;
+  background: #fff;
+  color: #46544d;
+  text-align: center;
+}
+
+.file-picker input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.file-picker span {
+  max-width: calc(100% - 32px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.primary-button,
+.download-button {
+  min-height: 42px;
+  border: 1px solid #2d5c48;
+  border-radius: 6px;
+  background: #2d5c48;
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.primary-button {
+  width: 100%;
+}
+
+.primary-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.document-panel {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 86px;
+  padding: 18px 24px;
+  border-bottom: 1px solid #dce2de;
+}
+
+.document-count {
+  min-width: 36px;
+  padding: 7px 8px;
+  border: 1px solid #b9c4bd;
+  border-radius: 6px;
+  color: #526158;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.document-list {
+  display: grid;
+}
+
+.document-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  min-height: 84px;
+  padding: 14px 24px;
+  border-bottom: 1px solid #e2e7e3;
+}
+
+.document-row:last-child {
+  border-bottom: 0;
+}
+
+.document-info {
+  min-width: 0;
+}
+
+.document-info h3 {
+  margin: 0 0 5px;
+  overflow: hidden;
+  font-size: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.document-info p {
+  margin: 0;
+  color: #718078;
+  font-size: 13px;
+}
+
+.download-button {
+  display: inline-grid;
+  min-width: 88px;
+  place-items: center;
+  background: #fff;
+  color: #2d5c48;
+}
+
+.notice,
+.state-message,
+.empty-state {
+  margin: 16px 0 0;
+  font-size: 13px;
+}
+
+.notice-success {
+  color: #226443;
+}
+
+.notice-error {
+  color: #9a3d32;
+}
+
+.document-panel > .notice,
+.document-panel > .state-message,
+.document-panel > .empty-state {
+  margin: 0;
+  padding: 32px 24px;
+}
+
+@media (max-width: 760px) {
+  .app-header > div,
+  .app-content {
+    width: min(100% - 32px, 1120px);
+  }
+
+  .app-header > div {
+    min-height: 88px;
+  }
+
+  .app-header h1 {
+    font-size: 28px;
+  }
+
+  .app-content {
+    grid-template-columns: 1fr;
+    padding-top: 20px;
+  }
+
+  .document-row {
+    grid-template-columns: minmax(0, 1fr) 82px;
+    padding-inline: 16px;
+  }
+
+  .section-heading,
+  .upload-panel {
+    padding-inline: 16px;
+  }
+}
